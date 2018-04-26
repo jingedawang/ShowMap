@@ -1,0 +1,173 @@
+<!DOCTYPE html>
+<html style="height: 100%">
+   <head>
+       <meta charset="utf-8">
+   </head>
+   <body style="height: 100%; margin: 0">
+        <button id="pathPlanning" style="width: 100px; height: 30px" onclick="pathPlanning()">计算</button>
+       <div id="container" style="height: 100%"></div>
+        <script src="http://cdn.static.runoob.com/libs/jquery/1.10.2/jquery.min.js"></script>
+       <script type="text/javascript" src="http://echarts.baidu.com/gallery/vendors/echarts/echarts.min.js"></script>
+       <script type="text/javascript" src="http://echarts.baidu.com/gallery/vendors/echarts-gl/echarts-gl.min.js"></script>
+       <script type="text/javascript" src="http://echarts.baidu.com/gallery/vendors/echarts-stat/ecStat.min.js"></script>
+       <script type="text/javascript" src="http://echarts.baidu.com/gallery/vendors/echarts/extension/dataTool.min.js"></script>
+       <script type="text/javascript" src="http://echarts.baidu.com/gallery/vendors/echarts/map/js/china.js"></script>
+       <script type="text/javascript" src="http://echarts.baidu.com/gallery/vendors/echarts/map/js/world.js"></script>
+       <script type="text/javascript" src="http://api.map.baidu.com/api?v=2.0&ak=ZUONbpqGBsYGXNIYHicvbAbM"></script>
+       <script type="text/javascript" src="http://echarts.baidu.com/gallery/vendors/echarts/extension/bmap.min.js"></script>
+       <script type="text/javascript" src="http://echarts.baidu.com/gallery/vendors/simplex.js"></script>
+       <script type="text/javascript">
+var dom = document.getElementById("container");
+var myChart = echarts.init(dom);
+var app = {};
+option = null;
+
+var height = 10;
+var width = 10;
+
+var data = [];
+for (var i=0; i<height; i++)
+{
+    for (var j=0; j<width; j++)
+    {
+        data.push([j, i, 5]);
+    }
+}
+
+data = data.concat([[5,3,0],[5,4,0],[5,5,0],[5,6,0],[5,7,0],[3,5,0],[4,5,0],[6,5,0],[7,5,0],
+            [3,1,1], [7,6,2],
+            [4,2,3],[5,2,3],[6,3,3],[7,4,3],[8,5,3]]);
+
+var COLORS = ["#884513", "#FF6347", "#006600", "#70b4eb", "#b4e0f3", "#ffffff"];
+
+var interval;
+var min = Infinity;
+var max = -Infinity;
+
+myChart.on('click', function (params) {
+    console.log(params.data);
+    item = params.data;
+    item[2] = 0;
+    data.push(item)
+    updateOption();
+    myChart.setOption(option, true);
+});
+
+function pathPlanning() {
+    $.get('/pathplanning', function(ret, status){
+        jsonText = JSON.parse(ret);
+        console.info(jsonText)
+		height = jsonText["height"];
+		width = jsonText["width"];
+		data = jsonText["data"];
+        updateOption()
+        myChart.setOption(option, true)
+    });
+}
+
+function renderItem(params, api) {
+    var yValue = api.value(1) + 1;
+    var start = api.coord([api.value(0), yValue]);
+    // start = api.coord([5, 15])
+    var size = api.size([api.value(1) - api.value(0), yValue]);
+    size = api.size([1, 1])
+    var style = api.style();
+
+    return {
+        type: 'rect',
+        shape: {
+            x: start[0] + 1,
+            y: start[1] + 1,
+            width: size[0] - 2,
+            height: size[1] - 2,
+        },
+        style: style
+    };
+}
+
+function updateOption() {
+    option = {
+    title: {
+        text: '路径规划',
+        subtext: 'By zll',
+        sublink: '',
+        left: 'center',
+        top: 10
+    },
+    color: ['rgb(25, 183, 207)'],
+    grid: {
+        top: 80,
+        containLabel: true
+    },
+    xAxis: [{
+        type: 'value',
+        min: 0,
+        max: width,
+        interval: 1
+    }],
+    yAxis: [{
+        type: 'value',
+        min: 0,
+        max: height,
+        interval: 1
+    }],
+    visualMap: {
+        type: 'piecewise',
+        inverse: true,
+        top: 10,
+        left: 10,
+        pieces: [{
+            value: 0, color: COLORS[0], label:'障碍物'
+        }, {
+            value: 1, color: COLORS[1], label:'起点'
+        }, {
+            value: 2, color: COLORS[2], label:'终点'
+        }, {
+            value: 3, color: COLORS[3], label:'最短路径'
+        }, {
+            value: 4, color: COLORS[4]
+        }, {
+            value: 5, color: COLORS[5]
+        }],
+        borderColor: '#ccc',
+        borderWidth: 0,
+        backgroundColor: '#eee',
+        dimension: 2,
+        inRange: {
+            color: COLORS,
+            opacity: 0.7
+        }
+    },
+    series: [{
+        name: 'height',
+        type: 'custom',
+        renderItem: renderItem,
+        label: {
+            normal: {
+                show: false,
+                position: 'insideTop'
+            }
+        },
+        itemStyle: {
+            emphasis: {
+                color: 'yellow'
+            }
+        },
+        encode: {
+            // x: [0, 1],
+            // y: 2,
+            tooltip: 2,
+        },
+        data: data
+    }]
+};
+}
+
+updateOption()
+
+if (option && typeof option === "object") {
+    myChart.setOption(option, true);
+}
+       </script>
+   </body>
+</html>
